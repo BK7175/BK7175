@@ -1,6 +1,6 @@
 # 👋 Hi, I’m BRIJESH KAPURIYA
 
-// 🎓 Master’s student passionate about tech, innovation, and impactful digital solutions.  
+// 🎓 Master’s student passionate about tech, innovation, and impactful digital solutions. //
 // 🛠️ Currently working in **IT Project Management** (1.5 years experience)  
 // 📊 Skilled in **ZOHO, WHOZ, Excel, Zendesk, SharePoint, GitHub, Software Development**  
 // 🌐 project management, software development and automation tools.
