@@ -1,0 +1,95 @@
+\chapter{Technological Review}
+
+This chapter give summary of the the core technologies and protocols underlying our workshop system, and then details our specific software approaches.
+
+\section{Devices and Technologies}
+\label{sec:core-tech}
+
+\paragraph{Bangle.js}  
+An open‐source smartwatch platform based on the Nordic nRF52840 SoC. It features a 240×240 color LCD, accelerometer, gyroscope, and heart‐rate sensor, all programmable via the Espruino JavaScript interpreter \cite{espruino_banglejs}.
+\begin{figure}[ht]
+  \centering
+    \includegraphics[width=0.3\textwidth]{figures/Bangle-js.png}
+    \caption{Bangle.js 2 smartwatch}
+    \label{fig:bangle}
+\end{figure}
+\paragraph{Puck.js}  
+A small BLE sensor badge using the Nordic nRF52832 chip, equipped with a push‐button and RGB LED. It can advertise custom BLE advertisements or expose GATT services for button‐press “buzz” events \cite{espruino_puckjs}.
+\begin{figure}[ht]
+  \centering
+    \includegraphics[width=0.3\textwidth]{figures/Puck-js.png}
+    \caption{Puck.js sensors}
+    \label{fig:bangle}
+\end{figure}
+\paragraph{Raspberry Pi}  
+We use the Raspberry Pi 4 Model B as a central hub. It runs Raspbian OS with \texttt{bluez} for BLE support and Python 3 with the Bleak library to coordinate multiple device connections \cite{raspberrypi_doc, bleak_docs}.
+\begin{figure}[ht]
+  \centering
+    \includegraphics[width=0.3\textwidth]{figures/RaspberryPi-5.png}
+    \caption{Raspberry Pi 5}
+    \label{fig:bangle}
+\end{figure}
+\paragraph{Python / Bleak}  
+Bleak is an asynchronous Python BLE client for Windows, macOS, and Linux. We leverage its \texttt{asyncio} API to scan, connect, and subscribe to notifications from multiple Puck.js devices concurrently \cite{bleak_docs}.
+
+\subsection{Bluetooth Low Energy (BLE) Communication}
+\label{sec:ble-basics}
+
+BLE is a low‐power wireless protocol optimized for short‐range data exchange using the Generic Attribute Profile (GATT). Devices advertise services via UUIDs and establish connections to read/write characteristics or subscribe to notifications\cite{BLE}\cite{UUID}. 
+
+Key features include:
+
+\begin{itemize}
+  \item \textbf{Low energy consumption:} Duty‐cycled advertising and connection intervals minimize power draw. According to theoretical results, the lifetime of a BLE device powered by a coin cell battery ranges between 2.0 days and 14.1 years\cite{UUID}.  
+  \item \textbf{GATT architecture:} Defines services (collections of characteristics) for structured data exchange. There are 11 features defined in the GATT Profile\cite{GATT}.  
+  \begin{figure}[ht]
+  \centering
+    \includegraphics[width=0.3\textwidth]{figures/GATT.png}
+    \caption{Examples of GATT configuration}\cite{GATT}
+    \label{fig:bangle}
+\end{figure}
+  \item \textbf{Scalability:} Supports multiple peripherals connecting to a single central, though typical Linux stacks limit reliable simultaneous links to 5–8 devices \cite{want2015enabling}.
+\end{itemize}
+
+In our system, Puck.js devices advertise a “buzz” characteristic UUID when their button is pressed. The Raspberry Pi scans for these advertisements, connects via GATT, and subscribes to notifications to timestamp each event.
+
+\subsection{Gamification and Interactivity Using Wearables}
+\label{sec:gamification}
+
+Gamification techniques—such as point scoring, real‐time feedback, and progressive challenge levels—have been shown to enhance student engagement and motivation in STEM education \cite{freeman2014active,gamification}. 
+Our workshop implements:
+
+\begin{enumerate}
+  \item \emph{Anonymous Buzz Collection:} Students press Puck.js buttons; the system records events without revealing identities.  
+  \item \emph{Visual Feedback Loop:} Bangle.js displays real‐time buzz counts and animations.  
+  \item \emph{Order Reveal:} Final display of buzz order to introduce friendly competition.
+\end{enumerate}
+
+\subsection{Our BLE Integration and Event‐Driven Programming Approaches}
+\label{sec:our-approach}
+
+We developed a Python script (\texttt{bridge.py}) that orchestrates BLE connections and event handling:
+
+\begin{itemize}
+  \item \textbf{Asyncio‐based Scanner:} Continuously scans for new Puck.js advertisements and spawns connection tasks.
+  \item \textbf{Connection Management:} Implements exponential back‐off and automatic retries to handle dropouts.
+  \item \textbf{Notification Callbacks:} Registers an \texttt{on\_buzz()} function to timestamp and enqueue incoming buzz events.
+  \item \textbf{Event Queue:} Maintains a FIFO queue of buzz events, which is periodically pushed to connected Bangle.js devices for display.
+\end{itemize}
+
+\begin{verbatim}
+async def buzz_callback(sender, data):
+    timestamp = time.time()
+    event_queue.put((sender, timestamp))
+
+async def scanner():
+    while True:
+        devices = await BleakScanner.discover()
+        for dev in devices:
+            if is_puck(dev):
+                asyncio.create_task(connect_and_listen(dev.address))
+        await asyncio.sleep(scan_interval)
+\end{verbatim}
+
+This event‐driven architecture ensured responsive, scalable handling of up to eight devices in our workshop sessions.
+
